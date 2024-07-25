@@ -1,93 +1,73 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width,initial-scale=1" />
-		<title>语音识别</title>
- 
-	</head>
-	<body style="margin-left: 3%">
-		<script src="recorder-core.js" charset="UTF-8"></script>
-		<script src="wav.js" charset="UTF-8"></script>
-		<script src="pcm.js" charset="UTF-8"></script>
+<html lang="en">
 
-		 
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web 录音</title>
+</head>
 
-        <h1>FunASR Demo</h1>
-						<h3>这里是FunASR开源项目体验demo，集成了VAD、ASR与标点等工业级别的模型，支持长音频离线文件转写，实时语音识别等，开源项目地址：https://github.com/alibaba-damo-academy/FunASR</h3>
+<body>
+  <button id="startRecord">开始录音</button>
+  <button id="stopRecord">停止录音</button>
+  <div id="recordingsList"></div>
 
-		<div class="div_class_topArea">
+  <script>
+    // 获取必要的DOM元素
+    const startRecordButton = document.getElementById('startRecord')
+    const stopRecordButton = document.getElementById('stopRecord')
+    const recordingsList = document.getElementById('recordingsList')
 
-			<div class="div_class_recordControl">
-				asr服务器地址(必填):
-				<br>
-				<input id="wssip" type="text" onchange="addresschange()" style=" width: 100%;height:100%" value="wss://127.0.0.1:10095/"/>
-				<br>
-				<a id="wsslink"  href="#" onclick="window.open('https://127.0.0.1:10095/', '_blank')"><div id="info_wslink">点此处手工授权wss://127.0.0.1:10095/</div></a>
-				<br>
-			<br>  
-			<div  style="border:2px solid #ccc;">
-				选择录音模式:<br/>
-    
-        <label><input name="recoder_mode" onclick="on_recoder_mode_change()" type="radio" value="mic" checked="true"/>麦克风 </label>&nbsp;&nbsp;
-        <label><input name="recoder_mode" onclick="on_recoder_mode_change()" type="radio" value="file" />文件 </label> 
+    let mediaRecorder
+    let recordedChunks = []
 
-				</div>
-				
-				<br>
-				 <div id="mic_mode_div" style="border:2px solid #ccc;display:block;">
-				选择asr模型模式:<br/>
-    
-      <label><input name="asr_mode" type="radio" value="2pass" checked="true"/>2pass </label>&nbsp;&nbsp;
-      <label><input name="asr_mode" type="radio" value="online" />online </label>&nbsp;&nbsp;
-      <label><input name="asr_mode" type="radio" value="offline" />offline </label>
+    // 获取用户媒体设备
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function (stream) {
+        console.log('获取权限')
+        // 创建一个MediaRecorder对象，将音频流传递给它
+        mediaRecorder = new MediaRecorder(stream)
 
-				</div>
-				
-				<div id="rec_mode_div" style="border:2px solid #ccc;display:none;">
-		 
-    
-		          <input type="file" id="upfile">
+        // 当有数据可用时触发该事件
+        mediaRecorder.ondataavailable = function (e) {
+          console.log('录音中...')
+          recordedChunks.push(e.data)
+        }
 
-				</div>
-				<br>
-				<div id="use_itn_div" style="border:2px solid #ccc;display:block;">
-					逆文本标准化(ITN):<br/>
-					<label><input name="use_itn" type="radio" value="false" checked="true"/>否 </label>&nbsp;&nbsp;
-					<label><input name="use_itn" type="radio" value="true" />是 </label>
-			   </div>
-			   <br>
-		        <div  style="border:2px solid #ccc;">
-					热词设置(一行一个关键字，空格隔开权重,如"阿里巴巴 20")：
-					<br>
-	
-	
-					<textarea rows="3"  id="varHot"  style=" width: 100%;height:100%" >阿里巴巴 20&#13;hello world 40</textarea>
-					<br>
-	
-					</div>
-				语音识别结果显示：
-				<br>
-				
-				<textarea rows="10"  id="varArea" readonly="true" style=" width: 100%;height:100%" ></textarea>
-				<br>
-                <div id="info_div">请点击开始</div>
-				<div class="div_class_buttons">
-					<button id="btnConnect">连接</button>
-					<button id="btnStart">开始</button>
-					<button id="btnStop">停止</button>
- 
-				</div>
-                
-				<audio id="audio_record" type="audio/wav" controls style="margin-top: 12px; width: 100%;"></audio>
-			</div>
-		</div>
+        // 录制停止时触发该事件
+        mediaRecorder.onstop = function () {
+          console.log('录音停止')
+          // 创建一个新的Blob，包含所有录制的音频数据
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' })
+          recordedChunks = []
 
- 		<script src="wsconnecter.js" charset="utf-8"></script>
-		<script src="main.js" charset="utf-8"></script>
-		<script crossorigin="anonymous" src="https://ga-album-cdnqn.52tt.com/web/vconsole/vconsole3.9.1.min.js"></script>
-        <script>
-            new VConsole();
-        </script>			
-	</body>
+          // 创建一个音频元素并设置其源
+          const audioElement = document.createElement('audio')
+          audioElement.controls = true
+          const audioURL = URL.createObjectURL(blob)
+          audioElement.src = audioURL
+
+          // 将音频元素添加到页面中
+          recordingsList.appendChild(audioElement)
+        }
+      })
+      .catch(function (err) {
+        console.error('获取用户媒体设备失败: ', err)
+      })
+
+    // 开始录制按钮点击事件
+    startRecordButton.addEventListener('click', function () {
+      recordedChunks = []
+      mediaRecorder.start()
+      console.log('录音已开始')
+    })
+
+    // 停止录制按钮点击事件
+    stopRecordButton.addEventListener('click', function () {
+      mediaRecorder.stop()
+      console.log('录音已停止')
+    });
+  </script>
+</body>
+
 </html>
